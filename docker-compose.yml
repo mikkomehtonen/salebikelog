@@ -4,9 +4,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./uploads:/app/uploads
-      - ./trips.db:/app/trips.db
+      - ./uploads:/app/uploads:Z
+      - ./database:/app/database:Z
     environment:
       - OLLAMA_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=qwen3.6-35b-a3b
-      - DB_PATH=/app/trips.db
+      - DB_PATH=/app/database/trips.db
