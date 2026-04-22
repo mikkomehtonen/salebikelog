@@ -1,8 +1,8 @@
 import base64
 import json
-import ollama
 from datetime import date
-from .config import OLLAMA_MODEL
+from openai import OpenAI
+from .config import LM_STUDIO_MODEL, LM_STUDIO_URL
 
 
 JSON_SCHEMA = {
@@ -42,8 +42,10 @@ def analyze_image(image_path: str):
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL,
+    client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
+
+    response = client.chat.completions.create(
+        model=LM_STUDIO_MODEL,
         messages=[
             {
                 "role": "system",
@@ -51,17 +53,31 @@ def analyze_image(image_path: str):
             },
             {
                 "role": "user",
-                "content": "Extract the trip data from this image.",
-                "images": [image_data],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Extract the trip data from this image.",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_data}",
+                        },
+                    },
+                ],
             },
         ],
-        format=JSON_SCHEMA,
-        options={
-            "temperature": 0,
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "bike_trip_data",
+                "schema": JSON_SCHEMA,
+            },
         },
+        temperature=0,
     )
 
-    raw = response["message"]["content"]
+    raw = response.choices[0].message.content
     return json.loads(raw)
 
 
