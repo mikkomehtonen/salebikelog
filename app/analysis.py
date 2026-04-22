@@ -2,7 +2,7 @@ import base64
 import json
 import ollama
 from datetime import date
-from .config import OLLAMA_URL, OLLAMA_MODEL
+from .config import OLLAMA_MODEL
 
 
 JSON_SCHEMA = {
@@ -16,7 +16,15 @@ JSON_SCHEMA = {
         "bike_id": {"type": "string"},
         "serial": {"type": "string"},
     },
-    "required": ["duration", "start_time", "end_time", "start_pos", "end_pos", "bike_id", "serial"],
+    "required": [
+        "duration",
+        "start_time",
+        "end_time",
+        "start_pos",
+        "end_pos",
+        "bike_id",
+        "serial",
+    ],
     "additionalProperties": False,
 }
 

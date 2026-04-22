@@ -40,8 +40,15 @@ docker compose up --build
 ## Example Image
 `tests/example.png` — trip summary screenshot used for prompt tuning.
 
+## Lint & Format
+```bash
+ruff check app/
+ruff format --check app/
+ruff check --fix app/
+ruff format app/
+```
+
 ## Gotchas
-- No lint/format/typecheck config — none is set up
 - No tests — none are set up
 - `created_at` in responses uses `datetime.utcnow()` — not from the DB row
 - If Ollama is unavailable, the upload endpoint returns 500 with analysis error detail
