@@ -1,14 +1,14 @@
 import base64
 import json
-from datetime import date
+from datetime import datetime, date, time
+from zoneinfo import ZoneInfo
 from openai import OpenAI
 from .config import LM_STUDIO_MODEL, LM_STUDIO_URL
-
 
 JSON_SCHEMA = {
     "type": "object",
     "properties": {
-        "duration": {"type": "integer"},
+        "length_min": {"type": "integer"},
         "start_time": {"type": "string"},
         "end_time": {"type": "string"},
         "start_pos": {"type": "string"},
@@ -17,7 +17,7 @@ JSON_SCHEMA = {
         "serial": {"type": "string"},
     },
     "required": [
-        "duration",
+        "length_min",
         "start_time",
         "end_time",
         "start_pos",
@@ -31,33 +31,46 @@ JSON_SCHEMA = {
 SYSTEM_PROMPT = (
     "You are a bike trip data extractor. "
     "Analyze the uploaded image of a city bike trip summary screen and extract the data as JSON. "
-    "The image shows a trip summary with duration, start/end times, start/end locations, "
+    "The image shows a trip summary with duration (i.e. length_min), start/end times, start/end locations, "
     "bike ID, and serial number. "
-    "Use today's date when combining with the extracted time to form full ISO 8601 timestamps. "
-    "Return ONLY valid JSON matching the schema. Do not include any other text."
+    "Return times as HH:MM only. "
+    "Do not invent a date. "
+    "Return ONLY valid JSON with these fields: "
+    "length_min, start_time, end_time, start_pos, end_pos, bike_id, serial."
 )
+
+def extract_json(text: str) -> dict:
+    text = text.strip()
+
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+
+    return json.loads(text)
 
 
 def analyze_image(image_path: str):
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
+    # client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
+    client = OpenAI(
+        base_url="http://127.0.0.1:1234/v1/",
+        api_key="lm-studio",
+    )
 
     response = client.chat.completions.create(
         model=LM_STUDIO_MODEL,
         messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
+            {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": [
-                    {
-                        "type": "text",
-                        "text": "Extract the trip data from this image.",
-                    },
+                    {"type": "text", "text": "Extract the trip data from this image."},
                     {
                         "type": "image_url",
                         "image_url": {
@@ -77,10 +90,42 @@ def analyze_image(image_path: str):
         temperature=0,
     )
 
-    raw = response.choices[0].message.content
-    return json.loads(raw)
+    if not response.choices:
+        raise ValueError(f"No choices in response: {response!r}")
 
+    message = response.choices[0].message
+
+    raw = message.content or getattr(message, "reasoning_content", None)
+    print(raw)
+
+    if not raw:
+        raise ValueError(
+            f"Model returned empty content and no reasoning_content. "
+            f"Full message: {message!r}. Full response: {response!r}"
+        )
+
+    raw = raw.strip()
+
+    if raw.startswith("```"):
+        lines = raw.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        raw = "\n".join(lines).strip()
+
+    try:
+        return json.loads(raw)
+    except Exception as e:
+        raise ValueError(
+            f"JSON parse failed. Raw content was: {raw!r}. Full message: {message!r}"
+        ) from e
 
 def combine_with_date(time_str: str) -> str:
-    today = date.today().isoformat()
-    return f"{today}T{time_str}:00"
+    hour, minute = map(int, time_str.split(":"))
+    dt = datetime.combine(
+        date.today(),
+        time(hour, minute),
+        tzinfo=ZoneInfo("Europe/Helsinki"),
+    )
+    return dt.isoformat()
