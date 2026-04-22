@@ -1,0 +1,28 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "permission": {
+        "read": "allow",
+        "edit": "allow",
+        "grep": "allow",
+        "glob": "allow",
+        "list": "allow",
+        "question": "allow",
+        "todowrite": "allow",
+        "todoread": "allow",
+        "bash": "ask",
+        "webfetch": "ask",
+        "lsp": "allow"
+    },
+    "lsp": {
+        "basedpyright": {
+            "command": [
+                "./.venv/bin/basedpyright-langserver",
+                "--stdio"
+            ],
+            "extensions": [
+                ".py",
+                ".pyi"
+            ]
+        }
+    }
+}
