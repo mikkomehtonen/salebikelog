@@ -57,11 +57,7 @@ def analyze_image(image_path: str):
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    # client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
-    client = OpenAI(
-        base_url="http://127.0.0.1:1234/v1/",
-        api_key="lm-studio",
-    )
+    client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
 
     response = client.chat.completions.create(
         model=LM_STUDIO_MODEL,
