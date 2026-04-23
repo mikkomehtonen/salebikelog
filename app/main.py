@@ -13,6 +13,11 @@ from .database import init_db
 app = FastAPI(title="City Bike Log", version="1.0.0")
 
 
+@app.get("/health")
+def health_check():
+    return {"status": True}
+
+
 @app.on_event("startup")
 def startup():
     init_db()
