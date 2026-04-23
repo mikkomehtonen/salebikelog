@@ -46,3 +46,15 @@ ollama serve
 ```
 
 When running in Docker with Ollama on the host, `host.docker.internal` is used to reach it.
+
+## Tests
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run with coverage
+python -m pytest tests/ -v --cov=app --cov-report=term-missing
+```
+
+Tests use a temporary SQLite database that is automatically cleaned up. Ollama is mocked — it does not need to be running.
