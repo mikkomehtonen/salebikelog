@@ -25,12 +25,19 @@ def upload_dir():
         yield Path(d)
 
 
-@pytest.fixture
-def client(db_path, upload_dir):
-    from app.main import app
+@pytest.fixture(scope="function", autouse=True)
+def seed_db(db_path):
+    if os.path.exists(db_path):
+        os.unlink(db_path)
     from app.database import init_db
 
     init_db()
+    yield
+
+
+@pytest.fixture(scope="session")
+def client(db_path, upload_dir):
+    from app.main import app
 
     with pytest.MonkeyPatch().context() as mp:
         mp.setattr("app.config.DB_PATH", db_path)
@@ -52,7 +59,7 @@ def client(db_path, upload_dir):
             yield TestClient(app)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def cleanup_db(db_path):
     yield
     if os.path.exists(db_path):

@@ -4,7 +4,8 @@ from .config import DB_PATH
 
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    conn = sqlite3.connect(DB_PATH)
+    try:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS trips (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,6 +21,8 @@ def init_db():
             )
         """)
         conn.commit()
+    finally:
+        conn.close()
 
 
 @contextmanager
