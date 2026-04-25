@@ -6,7 +6,15 @@ from fastapi.responses import JSONResponse
 
 from .config import UPLOAD_DIR
 from .schemas.trip import TripCreate, TripResponse
+from .schemas.position import PositionCreate, PositionResponse
 from .crud import create_trip, get_trip, list_trips, delete_trip
+from .crud import (
+    create_position,
+    get_position_by_id,
+    update_position,
+    list_positions,
+    delete_position,
+)
 from .analysis import analyze_image, combine_with_date
 from .database import init_db
 
@@ -93,4 +101,39 @@ def get_trip_by_id(trip_id: int):
 def delete_trip_by_id(trip_id: int):
     if not delete_trip(trip_id):
         raise HTTPException(status_code=404, detail="Trip not found")
+    return JSONResponse(status_code=204, content=None)
+
+
+@app.get("/api/positions", response_model=list[PositionResponse])
+def get_positions(limit: int = 50, offset: int = 0):
+    return list_positions(limit=limit, offset=offset)
+
+
+@app.get("/api/positions/{position_id}", response_model=PositionResponse)
+def get_position(position_id: int):
+    pos = get_position_by_id(position_id)
+    if not pos:
+        raise HTTPException(status_code=404, detail="Position not found")
+    return pos
+
+
+@app.post("/api/positions", response_model=PositionResponse, status_code=201)
+def create_position_endpoint(data: PositionCreate):
+    pos_id = create_position(data.name, data.latitude, data.longitude, data.altitude)
+    pos = get_position_by_id(pos_id)
+    return pos
+
+
+@app.patch("/api/positions/{position_id}", response_model=PositionResponse)
+def update_position_endpoint(position_id: int, data: PositionCreate):
+    if not update_position(position_id, data.latitude, data.longitude, data.altitude):
+        raise HTTPException(status_code=404, detail="Position not found")
+    pos = get_position_by_id(position_id)
+    return pos
+
+
+@app.delete("/api/positions/{position_id}", status_code=204)
+def delete_position_endpoint(position_id: int):
+    if not delete_position(position_id):
+        raise HTTPException(status_code=404, detail="Position not found")
     return JSONResponse(status_code=204, content=None)

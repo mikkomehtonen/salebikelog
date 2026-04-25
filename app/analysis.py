@@ -39,6 +39,7 @@ SYSTEM_PROMPT = (
     "length_min, start_time, end_time, start_pos, end_pos, bike_id, serial."
 )
 
+
 def extract_json(text: str) -> dict:
     text = text.strip()
 
@@ -116,6 +117,7 @@ def analyze_image(image_path: str):
         raise ValueError(
             f"JSON parse failed. Raw content was: {raw!r}. Full message: {message!r}"
         ) from e
+
 
 def combine_with_date(time_str: str) -> str:
     hour, minute = map(int, time_str.split(":"))

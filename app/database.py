@@ -20,6 +20,17 @@ def init_db():
                 created_at  TEXT DEFAULT (datetime('now'))
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS positions (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                name         TEXT NOT NULL UNIQUE,
+                latitude     REAL,
+                longitude    REAL,
+                altitude     REAL,
+                created_at   TEXT DEFAULT (datetime('now')),
+                updated_at   TEXT DEFAULT (datetime('now'))
+            )
+        """)
         conn.commit()
     finally:
         conn.close()

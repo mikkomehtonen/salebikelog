@@ -18,7 +18,8 @@ docker compose up --build
 - **Analysis:** `app/analysis.py` — LM Studio vision (JSON schema output), `analyze_image()` returns parsed dict
 - **CRUD:** `app/crud.py` — thin sqlite3 wrappers
 - **Config:** `app/config.py` — env vars: `DB_PATH`, `LM_STUDIO_URL`, `LM_STUDIO_MODEL`
-- **Schema:** `app/schemas/trip.py` — Pydantic models
+- **Schema:** `app/schemas/trip.py` — TripCreate/TripResponse Pydantic models
+- **Schema:** `app/schemas/position.py` — PositionCreate/PositionResponse Pydantic models
 
 ## Critical Details
 - **LM Studio required** on host (port `1234`) with `qwen/qwen3.6-35b-a3b` loaded before running
@@ -29,6 +30,16 @@ docker compose up --build
 - **No auth, no validation of vision model response** beyond Pydantic — if analysis fails, returns 500
 - `uploads/` and `trips.db` are gitignored
 
+## Database
+| Table | Columns |
+|-------|---------|
+| `trips` | `id`, `bike_id`, `serial`, `length_min`, `start_time`, `end_time`, `start_pos`, `end_pos`, `image_url`, `created_at` |
+| `positions` | `id`, `name` (UNIQUE), `latitude`, `longitude`, `altitude`, `created_at`, `updated_at` |
+
+- `trips` table is **never altered** after initial creation — `start_pos`/`end_pos` are address strings
+- `positions` table is looked up by `name` matching `start_pos`/`end_pos` address strings
+- `latitude`/`longitude`/`altitude` in positions are nullable — admin fills them in later
+
 ## API
 | Method | Path | Notes |
 |--------|------|-------|
@@ -36,6 +47,11 @@ docker compose up --build
 | GET | `/api/trips` | Paginated (`?limit=50&offset=0`) |
 | GET | `/api/trips/{id}` | 404 if not found |
 | DELETE | `/api/trips/{id}` | 204 on success, 404 if not found |
+| GET | `/api/positions` | Paginated (`?limit=50&offset=0`) |
+| GET | `/api/positions/{id}` | 404 if not found |
+| POST | `/api/positions` | Create/update position (201, idempotent by name) |
+| PATCH | `/api/positions/{id}` | Update position coords |
+| DELETE | `/api/positions/{id}` | 204 on success, 404 if not found |
 
 ## Example Image
 `tests/example.png` — trip summary screenshot used for prompt tuning.
