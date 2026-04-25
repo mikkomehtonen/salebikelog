@@ -60,17 +60,19 @@ async def upload_trip(file: UploadFile = File(...)):
 
     trip_id = create_trip(trip_data, image_url)
 
+    trip = get_trip(trip_id)
+
     return TripResponse(
-        id=trip_id,
-        bike_id=trip_data.bike_id,
-        serial=trip_data.serial,
-        length_min=trip_data.length_min,
-        start_time=trip_data.start_time,
-        end_time=trip_data.end_time,
-        start_pos=trip_data.start_pos,
-        end_pos=trip_data.end_pos,
-        image_url=image_url,
-        created_at=datetime.utcnow().isoformat(),
+        id=trip["id"],
+        bike_id=trip["bike_id"],
+        serial=trip["serial"],
+        length_min=trip["length_min"],
+        start_time=datetime.fromisoformat(trip["start_time"]),
+        end_time=datetime.fromisoformat(trip["end_time"]),
+        start_pos=trip["start_pos"],
+        end_pos=trip["end_pos"],
+        image_url=trip["image_url"],
+        created_at=trip["created_at"],
     )
 
 
