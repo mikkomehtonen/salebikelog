@@ -1,0 +1,5 @@
+name: signal-image-proxy
+version: "1.0.0"
+description: Forward Signal image attachments to bike trip backend
+provides_tools:
+  - forward_bike_trip_image
