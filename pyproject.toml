@@ -1,0 +1,134 @@
+[project]
+name = "salebikelog"
+version = "1.0.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  # Core
+  "E", "F", "I", "W", "UP", "B", "SIM",
+  "A", "C4", "RUF", "PT", "T20", "TRY",
+  "RET", "SLF", "ARG", "ERA",
+  "PLC", "PLE", "PLR", "PLW",
+  # Parity with strict TS guardrails
+  "N",     # pep8-naming
+  "D",     # pydocstyle
+  "C90",   # McCabe complexity
+  "S",     # bandit security
+  "FBT",   # boolean trap
+  "TCH",   # type-checking imports
+  "PIE",   # misc quality
+  "PERF",  # performance anti-patterns
+  "FURB",  # modernization
+  "LOG",   # logging best practices
+  # Quality & correctness
+  "BLE",   # blind except
+  "EM",    # error messages must be variables, not f-strings in raise
+  "DTZ",   # naive datetime banned
+  "ISC",   # implicit string concatenation
+  "RSE",   # unnecessary parens in raise
+  "G",     # %s logging, not f-strings
+  "PGH",   # blanket type:ignore / noqa, eval/exec
+  "FLY",   # .format() -> f-strings
+  "YTT",   # sys.version checks
+  "T10",   # no pdb / breakpoint in production
+  "INP",   # require __init__.py in packages
+  "FIX",   # detect FIXME/BUG/HACK
+  "TD",    # TODO format enforcement
+  "TID",   # ban relative imports, import tidiness
+  "COM",   # trailing comma
+]
+ignore = [
+  "E501",   # line length handled by formatter
+  "D100",   # module docstrings - too noisy
+  "D101",   # class docstrings - too noisy for existing code
+  "D103",   # function docstrings - too noisy for existing code
+  "D104",   # package docstrings (__init__.py)
+  "D107",   # __init__ docstrings
+  "TD003",  # TODO issue link - too strict for early dev
+  "FIX002", # TODO allowed; only FIXME/BUG/HACK blocked
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 4
+max-branches = 10
+max-returns = 4
+max-statements = 50
+
+[tool.ruff.lint.per-file-ignores]
+"app/config.py" = [
+  "T20",     # config.py reads os.environ (the only allowed place)
+  "PLR0911", # __getattr__ has many returns for compatibility shims
+]
+"app/main.py" = [
+  "B008",    # FastAPI requires File() in default arguments
+]
+"scripts/coverage_ratchet.py" = [
+  "T20",     # print is the intended output mechanism for CLI scripts
+  "S603",    # subprocess calls are trusted (running pytest)
+  "INP001",  # scripts/ doesn't need __init__.py
+]
+"tests/**" = [
+  "S101",    # assert is fine in tests
+  "S310",    # urlopen audit not needed in tests
+  "D",       # docstrings not required in tests
+  "ARG",     # unused fixture args
+  "PLR2004", # magic numbers in tests
+  "FBT",     # boolean args fine in tests
+  "C90",     # complexity relaxed in tests
+  "SLF",     # private access fine in tests
+  "PT011",   # broad pytest.raises is fine
+  "PT017",   # assertion in except block is fine
+  "TRY003",  # long exception messages fine in tests
+  "TRY301",  # raise within try fine in tests
+  "PERF",
+  "BLE",
+  "EM",
+  "DTZ",
+  "T10",
+  "TD",
+  "FIX",
+  "COM",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = "sqlite3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "openai.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fastapi.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pydantic.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=app --cov-report=term --cov-branch --cov-fail-under=95"
+
+[tool.coverage.run]
+omit = []

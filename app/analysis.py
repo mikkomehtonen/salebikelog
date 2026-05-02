@@ -1,9 +1,15 @@
 import base64
 import json
-from datetime import datetime, date, time
+import logging
+from datetime import datetime, time
+from typing import Any, cast
 from zoneinfo import ZoneInfo
+
 from openai import OpenAI
+
 from .config import LM_STUDIO_MODEL, LM_STUDIO_URL
+
+logger = logging.getLogger(__name__)
 
 JSON_SCHEMA = {
     "type": "object",
@@ -40,7 +46,7 @@ SYSTEM_PROMPT = (
 )
 
 
-def extract_json(text: str) -> dict:
+def extract_json(text: str) -> dict[str, Any]:
     text = text.strip()
 
     if text.startswith("```"):
@@ -51,17 +57,17 @@ def extract_json(text: str) -> dict:
             lines = lines[:-1]
         text = "\n".join(lines).strip()
 
-    return json.loads(text)
+    return cast("dict[str, Any]", json.loads(text))
 
 
-def analyze_image(image_path: str):
+def analyze_image(image_path: str) -> dict[str, Any]:
     with open(image_path, "rb") as f:
         image_data = base64.b64encode(f.read()).decode("utf-8")
 
-    client = OpenAI(base_url=LM_STUDIO_URL, api_key="lm-studio")
+    client = OpenAI(base_url=str(LM_STUDIO_URL), api_key="lm-studio")
 
     response = client.chat.completions.create(
-        model=LM_STUDIO_MODEL,
+        model=str(LM_STUDIO_MODEL),
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -88,18 +94,20 @@ def analyze_image(image_path: str):
     )
 
     if not response.choices:
-        raise ValueError(f"No choices in response: {response!r}")
+        msg = f"No choices in response: {response!r}"
+        raise ValueError(msg)
 
     message = response.choices[0].message
 
     raw = message.content or getattr(message, "reasoning_content", None)
-    print(raw)
+    logger.debug("Model response: %s", raw)
 
     if not raw:
-        raise ValueError(
+        msg = (
             f"Model returned empty content and no reasoning_content. "
             f"Full message: {message!r}. Full response: {response!r}"
         )
+        raise ValueError(msg)
 
     raw = raw.strip()
 
@@ -112,17 +120,17 @@ def analyze_image(image_path: str):
         raw = "\n".join(lines).strip()
 
     try:
-        return json.loads(raw)
+        return cast("dict[str, Any]", json.loads(raw))
     except Exception as e:
-        raise ValueError(
-            f"JSON parse failed. Raw content was: {raw!r}. Full message: {message!r}"
-        ) from e
+        msg = f"JSON parse failed. Raw content was: {raw!r}. Full message: {message!r}"
+        raise ValueError(msg) from e
 
 
 def combine_with_date(time_str: str) -> str:
+    """Combine a HH:MM time string with today's date, returning ISO 8601."""
     hour, minute = map(int, time_str.split(":"))
     dt = datetime.combine(
-        date.today(),
+        datetime.now(tz=ZoneInfo("Europe/Helsinki")).date(),
         time(hour, minute),
         tzinfo=ZoneInfo("Europe/Helsinki"),
     )

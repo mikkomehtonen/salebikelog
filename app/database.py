@@ -1,9 +1,11 @@
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
+
 from .config import DB_PATH
 
 
-def init_db():
+def init_db() -> None:
     conn = sqlite3.connect(DB_PATH)
     try:
         conn.execute("""
@@ -37,7 +39,7 @@ def init_db():
 
 
 @contextmanager
-def get_db():
+def get_db() -> Generator[sqlite3.Connection, None, None]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     try:

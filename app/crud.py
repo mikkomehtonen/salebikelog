@@ -1,8 +1,15 @@
+"""Database CRUD operations with typed return values."""
+
+from typing import Any, cast
+
 from .database import get_db
 from .schemas.trip import TripCreate
 
+Row = dict[str, Any]
 
-def create_trip(data: TripCreate, image_url: str):
+
+def create_trip(data: TripCreate, image_url: str) -> int:
+    """Insert a trip and return its ID."""
     with get_db() as conn:
         cursor = conn.execute(
             """
@@ -22,16 +29,21 @@ def create_trip(data: TripCreate, image_url: str):
         )
         conn.commit()
         trip_id = cursor.lastrowid
+        if trip_id is None:
+            msg = "Failed to create trip: no row ID returned"
+            raise RuntimeError(msg)
         return trip_id
 
 
-def get_trip(trip_id: int):
+def get_trip(trip_id: int) -> Row | None:
+    """Fetch a trip by ID, returning dict or None."""
     with get_db() as conn:
         row = conn.execute("SELECT * FROM trips WHERE id = ?", (trip_id,)).fetchone()
         return dict(row) if row else None
 
 
-def list_trips(limit: int = 50, offset: int = 0):
+def list_trips(limit: int = 50, offset: int = 0) -> list[Row]:
+    """List trips ordered by created_at descending."""
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM trips ORDER BY created_at DESC LIMIT ? OFFSET ?",
@@ -40,7 +52,8 @@ def list_trips(limit: int = 50, offset: int = 0):
         return [dict(r) for r in rows]
 
 
-def delete_trip(trip_id: int):
+def delete_trip(trip_id: int) -> bool:
+    """Delete a trip by ID. Returns True if a row was removed."""
     with get_db() as conn:
         cursor = conn.execute("DELETE FROM trips WHERE id = ?", (trip_id,))
         conn.commit()
@@ -48,8 +61,12 @@ def delete_trip(trip_id: int):
 
 
 def create_position(
-    name: str, latitude: float | None, longitude: float | None, altitude: float | None
-):
+    name: str,
+    latitude: float | None,
+    longitude: float | None,
+    altitude: float | None,
+) -> int:
+    """Insert a position, returning its ID (idempotent by name)."""
     with get_db() as conn:
         try:
             cursor = conn.execute(
@@ -60,24 +77,38 @@ def create_position(
                 (name, latitude, longitude, altitude),
             )
             conn.commit()
-            return cursor.lastrowid
         except conn.IntegrityError:
             row = conn.execute(
-                "SELECT id FROM positions WHERE name = ?", (name,)
+                "SELECT id FROM positions WHERE name = ?",
+                (name,),
             ).fetchone()
-            return row["id"] if row else None
+            if row:
+                row_id = row["id"]
+                if row_id is not None:
+                    return cast("int", row_id)
+            msg = f"Failed to find or create position: {name}"
+            raise RuntimeError(msg) from None
+        else:
+            lastrowid = cursor.lastrowid
+            if lastrowid is not None:
+                return lastrowid
+            msg = "Failed to create position: no row ID returned"
+            raise RuntimeError(msg)
 
 
-def get_position_by_name(name: str):
+def get_position_by_name(name: str) -> Row | None:
+    """Fetch a position by name, returning dict or None."""
     with get_db() as conn:
         row = conn.execute("SELECT * FROM positions WHERE name = ?", (name,)).fetchone()
         return dict(row) if row else None
 
 
-def get_position_by_id(position_id: int):
+def get_position_by_id(position_id: int) -> Row | None:
+    """Fetch a position by ID, returning dict or None."""
     with get_db() as conn:
         row = conn.execute(
-            "SELECT * FROM positions WHERE id = ?", (position_id,)
+            "SELECT * FROM positions WHERE id = ?",
+            (position_id,),
         ).fetchone()
         return dict(row) if row else None
 
@@ -87,7 +118,8 @@ def update_position(
     latitude: float | None,
     longitude: float | None,
     altitude: float | None,
-):
+) -> bool:
+    """Update position coordinates. Returns True if a row was updated."""
     with get_db() as conn:
         cursor = conn.execute(
             """
@@ -100,7 +132,8 @@ def update_position(
         return cursor.rowcount > 0
 
 
-def list_positions(limit: int = 50, offset: int = 0):
+def list_positions(limit: int = 50, offset: int = 0) -> list[Row]:
+    """List positions ordered by name ascending."""
     with get_db() as conn:
         rows = conn.execute(
             "SELECT * FROM positions ORDER BY name ASC LIMIT ? OFFSET ?",
@@ -109,7 +142,8 @@ def list_positions(limit: int = 50, offset: int = 0):
         return [dict(r) for r in rows]
 
 
-def delete_position(position_id: int):
+def delete_position(position_id: int) -> bool:
+    """Delete a position by ID. Returns True if a row was removed."""
     with get_db() as conn:
         cursor = conn.execute("DELETE FROM positions WHERE id = ?", (position_id,))
         conn.commit()
