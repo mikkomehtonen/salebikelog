@@ -9,7 +9,7 @@
         "question": "allow",
         "todowrite": "allow",
         "todoread": "allow",
-        "bash": "ask",
+        "bash": "allow",
         "webfetch": "ask",
         "lsp": "allow"
     },
