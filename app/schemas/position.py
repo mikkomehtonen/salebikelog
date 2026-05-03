@@ -16,3 +16,9 @@ class PositionResponse(BaseModel):
     altitude: float | None
     created_at: str
     updated_at: str
+
+
+class PositionUnmatched(BaseModel):
+    name: str
+    source: str
+    trip_id: int

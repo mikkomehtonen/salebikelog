@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
@@ -16,12 +16,13 @@ from .crud import (
     delete_trip,
     get_position_by_id,
     get_trip,
+    get_unmatched_positions,
     list_positions,
     list_trips,
     update_position,
 )
 from .database import init_db
-from .schemas.position import PositionCreate, PositionResponse
+from .schemas.position import PositionCreate, PositionResponse, PositionUnmatched
 from .schemas.trip import TripCreate, TripResponse
 
 app = FastAPI(title="City Bike Log", version="1.0.0")
@@ -118,6 +119,11 @@ def delete_trip_by_id(trip_id: int) -> JSONResponse:
 @app.get("/api/positions", response_model=list[PositionResponse])
 def get_positions(limit: int = 50, offset: int = 0) -> list[PositionResponse]:
     return list_positions(limit=limit, offset=offset)  # type: ignore[return-value]
+
+
+@app.get("/api/positions/unmatched", response_model=list[PositionUnmatched])
+def get_unmatched_positions_endpoint() -> list[dict[str, Any]]:
+    return get_unmatched_positions()
 
 
 @app.get("/api/positions/{position_id}", response_model=PositionResponse)

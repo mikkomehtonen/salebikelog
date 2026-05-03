@@ -148,3 +148,20 @@ def delete_position(position_id: int) -> bool:
         cursor = conn.execute("DELETE FROM positions WHERE id = ?", (position_id,))
         conn.commit()
         return cursor.rowcount > 0
+
+
+def get_unmatched_positions() -> list[dict[str, object]]:
+    """Return trip positions that have no entry in the positions table."""
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT t.start_pos as name, 'start_pos' as source, t.id as trip_id
+            FROM trips t
+            WHERE t.start_pos NOT IN (SELECT name FROM positions)
+            UNION ALL
+            SELECT t.end_pos, 'end_pos', t.id
+            FROM trips t
+            WHERE t.end_pos NOT IN (SELECT name FROM positions)
+            """,
+        ).fetchall()
+        return [dict(r) for r in rows]
