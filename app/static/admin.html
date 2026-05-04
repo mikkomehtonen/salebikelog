@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Positions</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #222; padding: 24px; }
+  h1 { font-size: 1.5rem; margin-bottom: 24px; }
+  h2 { font-size: 1.1rem; margin-bottom: 12px; color: #444; }
+  .section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .section.unmatched { border-left: 4px solid #e67e22; }
+  .section.missing { border-left: 4px solid #3498db; }
+  .section.all { border-left: 4px solid #27ae60; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; }
+  th { background: #fafafa; font-weight: 600; color: #555; white-space: nowrap; }
+  tr:hover { background: #f9f9f9; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+  .badge.start { background: #e8f5e9; color: #2e7d32; }
+  .badge.end { background: #e3f2fd; color: #1565c0; }
+  .btn { display: inline-block; padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.82rem; font-weight: 500; text-decoration: none; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+  .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .actions { white-space: nowrap; }
+  .empty { color: #999; font-style: italic; padding: 8px 0; }
+
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 10px; padding: 28px 32px; width: 420px; max-width: 95vw; box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+  .modal h3 { margin-bottom: 20px; font-size: 1.15rem; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .field input { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+  .field input:focus { border-color: #2563eb; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .btn-cancel { background: #e5e7eb; color: #333; }
+  .btn-cancel:hover { background: #d1d5db; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #16a34a; color: #fff; padding: 10px 20px; border-radius: 6px; font-size: 0.88rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200; }
+  .toast.show { opacity: 1; }
+  .toast.error { background: #dc2626; }
+</style>
+</head>
+<body>
+<h1>Admin — Positions</h1>
+
+<!-- Unmatched positions -->
+<div class="section unmatched">
+  <h2>Unmatched positions <span id="unmatched-count" class="badge" style="background:#fde68a;color:#92400e;">0</span></h2>
+  <p style="font-size:0.82rem;color:#666;margin-bottom:12px;">Trip addresses that have no entry in the positions table yet.</p>
+  <table>
+    <thead><tr><th>Name</th><th>Source</th><th>Trip ID</th><th>Action</th></tr></thead>
+    <tbody id="unmatched-tbody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+  </table>
+</div>
+
+<!-- Positions with missing coordinates -->
+<div class="section missing">
+  <h2>Missing coordinates <span id="missing-count" class="badge" style="background:#bfdbfe;color:#1e40af;">0</span></h2>
+  <p style="font-size:0.82rem;color:#666;margin-bottom:12px;">Positions with no latitude/longitude filled in yet.</p>
+  <table>
+    <thead><tr><th>Name</th><th>Altitude</th><th>Updated</th><th>Action</th></tr></thead>
+    <tbody id="missing-tbody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+  </table>
+</div>
+
+<!-- All positions -->
+<div class="section all">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <h2 style="margin:0;">All positions</h2>
+    <button class="btn btn-success" onclick="openCreate()">+ Add position</button>
+  </div>
+  <table>
+    <thead><tr><th>Name</th><th>Latitude</th><th>Longitude</th><th>Altitude</th><th>Updated</th><th>Actions</th></tr></thead>
+    <tbody id="all-tbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Position</h3>
+    <form id="position-form" onsubmit="handleSubmit(event)">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input id="f-name" name="name" required>
+      </div>
+      <div class="field">
+        <label for="f-lat">Latitude</label>
+        <input id="f-lat" name="latitude" type="number" step="any" placeholder="e.g. 40.7128">
+      </div>
+      <div class="field">
+        <label for="f-lng">Longitude</label>
+        <input id="f-lng" name="longitude" type="number" step="any" placeholder="e.g. -74.0060">
+      </div>
+      <div class="field">
+        <label for="f-alt">Altitude</label>
+        <input id="f-alt" name="altitude" type="number" step="any" placeholder="e.g. 10">
+      </div>
+      <input type="hidden" id="f-id">
+      <div class="modal-actions">
+        <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="modal-submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api/positions';
+let allPositions = [];
+
+// --- Toast ---
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+// --- Unmatched ---
+async function loadUnmatched() {
+  try {
+    const r = await fetch(API + '/unmatched');
+    const data = await r.json();
+    const tbody = document.getElementById('unmatched-tbody');
+    document.getElementById('unmatched-count').textContent = data.length;
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">None — all positions matched.</td></tr>'; return; }
+    tbody.innerHTML = data.map(u => `
+      <tr>
+        <td>${esc(u.name)}</td>
+        <td><span class="badge ${u.source === 'start_pos' ? 'start' : 'end'}">${esc(u.source)}</span></td>
+        <td>${u.trip_id}</td>
+        <td class="actions"><button class="btn btn-primary btn-sm" onclick="createFromUnmatched(${JSON.stringify(u.name).replace(/"/g, '&quot;')})">Create</button></td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('unmatched-tbody').innerHTML = '<tr><td colspan="4" class="empty">Failed to load.</td></tr>';
+  }
+}
+
+// --- Missing coordinates ---
+async function loadMissing() {
+  try {
+    const r = await fetch(API + '?limit=10000&offset=0');
+    const all = await r.json();
+    const missing = all.filter(p => p.latitude == null && p.longitude == null);
+    document.getElementById('missing-count').textContent = missing.length;
+    const tbody = document.getElementById('missing-tbody');
+    if (!missing.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">All positions have coordinates.</td></tr>'; return; }
+    tbody.innerHTML = missing.map(p => `
+      <tr>
+        <td>${esc(p.name)}</td>
+        <td>${p.altitude != null ? esc(String(p.altitude)) : '<span style="color:#999">—</span>'}</td>
+        <td>${esc(p.updated_at)}</td>
+        <td class="actions"><button class="btn btn-primary btn-sm" onclick="openEdit(${p.id})">Edit</button></td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('missing-tbody').innerHTML = '<tr><td colspan="4" class="empty">Failed to load.</td></tr>';
+  }
+}
+
+// --- All positions ---
+async function loadAll() {
+  try {
+    const r = await fetch(API + '?limit=10000&offset=0');
+    allPositions = await r.json();
+    const tbody = document.getElementById('all-tbody');
+    if (!allPositions.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No positions yet.</td></tr>'; return; }
+    tbody.innerHTML = allPositions.map(p => `
+      <tr>
+        <td>${esc(p.name)}</td>
+        <td>${p.latitude != null ? esc(String(p.latitude)) : '<span style="color:#999">—</span>'}</td>
+        <td>${p.longitude != null ? esc(String(p.longitude)) : '<span style="color:#999">—</span>'}</td>
+        <td>${p.altitude != null ? esc(String(p.altitude)) : '<span style="color:#999">—</span>'}</td>
+        <td>${esc(p.updated_at)}</td>
+        <td class="actions">
+          <button class="btn btn-primary btn-sm" onclick="openEdit(${p.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePos(${p.id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    document.getElementById('all-tbody').innerHTML = '<tr><td colspan="6" class="empty">Failed to load.</td></tr>';
+  }
+}
+
+// --- Modal ---
+function openCreate() {
+  document.getElementById('modal-title').textContent = 'Add Position';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lng').value = '';
+  document.getElementById('f-alt').value = '';
+  document.getElementById('modal-submit').textContent = 'Save';
+  document.getElementById('modal').classList.add('open');
+}
+
+function openEdit(id) {
+  const p = allPositions.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('modal-title').textContent = 'Edit Position';
+  document.getElementById('f-id').value = p.id;
+  document.getElementById('f-name').value = p.name;
+  document.getElementById('f-lat').value = p.latitude ?? '';
+  document.getElementById('f-lng').value = p.longitude ?? '';
+  document.getElementById('f-alt').value = p.altitude ?? '';
+  document.getElementById('modal-submit').textContent = 'Update';
+  document.getElementById('modal').classList.add('open');
+}
+
+function createFromUnmatched(name) {
+  document.getElementById('modal-title').textContent = 'Create Position';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-lat').value = '';
+  document.getElementById('f-lng').value = '';
+  document.getElementById('f-alt').value = '';
+  document.getElementById('modal-submit').textContent = 'Create';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+// --- Submit ---
+async function handleSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('f-id').value;
+  const name = document.getElementById('f-name').value.trim();
+  const lat = document.getElementById('f-lat').value ? parseFloat(document.getElementById('f-lat').value) : null;
+  const lng = document.getElementById('f-lng').value ? parseFloat(document.getElementById('f-lng').value) : null;
+  const alt = document.getElementById('f-alt').value ? parseFloat(document.getElementById('f-alt').value) : null;
+
+  if (!name) { toast('Name is required.', true); return; }
+
+  const body = { name, latitude: lat, longitude: lng, altitude: alt };
+  const url = id ? `${API}/${id}` : API;
+  const method = id ? 'PATCH' : 'POST';
+
+  try {
+    const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.detail || 'Request failed');
+    }
+    toast(id ? 'Position updated.' : 'Position created.');
+    closeModal();
+    await Promise.all([loadAll(), loadMissing(), loadUnmatched()]);
+  } catch(err) {
+    toast(err.message || 'Failed to save.', true);
+  }
+}
+
+// --- Delete ---
+async function deletePos(id) {
+  if (!confirm('Delete this position?')) return;
+  try {
+    const r = await fetch(`${API}/${id}`, { method: 'DELETE' });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.detail || 'Delete failed'); }
+    toast('Position deleted.');
+    await Promise.all([loadAll(), loadMissing(), loadUnmatched()]);
+  } catch(err) {
+    toast(err.message || 'Delete failed.', true);
+  }
+}
+
+// --- Escape ---
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// --- Init ---
+Promise.all([loadAll(), loadMissing(), loadUnmatched()]).catch(e => toast('Failed to load: ' + e.message, true));
+</script>
+</body>
+</html>

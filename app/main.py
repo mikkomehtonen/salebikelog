@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from .analysis import analyze_image, combine_with_date
 from .config import UPLOAD_DIR
@@ -158,3 +158,11 @@ def delete_position_endpoint(position_id: int) -> JSONResponse:
     if not delete_position(position_id):
         raise HTTPException(status_code=404, detail="Position not found")
     return JSONResponse(status_code=204, content=None)
+
+
+_ADMIN_HTML = (Path(__file__).resolve().parent / "static" / "admin.html").read_text()
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page() -> HTMLResponse:
+    return HTMLResponse(_ADMIN_HTML)
