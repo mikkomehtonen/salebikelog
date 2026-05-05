@@ -83,13 +83,16 @@ def analyze_image(image_path: str) -> dict[str, Any]:
                 ],
             },
         ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "bike_trip_data",
-                "schema": JSON_SCHEMA,
+        response_format=cast(
+            "Any",
+            {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "bike_trip_data",
+                    "schema": JSON_SCHEMA,
+                },
             },
-        },
+        ),
         temperature=0,
     )
 

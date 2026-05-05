@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -98,7 +98,22 @@ async def upload_trip(file: UploadFile = File(...)) -> TripResponse:
 
 @app.get("/api/trips", response_model=list[TripResponse])
 def get_trips(limit: int = 50, offset: int = 0) -> list[TripResponse]:
-    return cast("list[TripResponse]", list_trips(limit=limit, offset=offset))
+    rows = list_trips(limit=limit, offset=offset)
+    return [
+        TripResponse(
+            id=r["id"],
+            bike_id=r["bike_id"],
+            serial=r["serial"],
+            length_min=r["length_min"],
+            start_time=datetime.fromisoformat(r["start_time"]),
+            end_time=datetime.fromisoformat(r["end_time"]),
+            start_pos=r["start_pos"],
+            end_pos=r["end_pos"],
+            image_url=r["image_url"],
+            created_at=r["created_at"],
+        )
+        for r in rows
+    ]
 
 
 @app.get("/api/trips/{trip_id}", response_model=TripResponse)
@@ -106,7 +121,18 @@ def get_trip_by_id(trip_id: int) -> TripResponse:
     trip = get_trip(trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    return trip  # type: ignore[return-value]
+    return TripResponse(
+        id=trip["id"],
+        bike_id=trip["bike_id"],
+        serial=trip["serial"],
+        length_min=trip["length_min"],
+        start_time=datetime.fromisoformat(trip["start_time"]),
+        end_time=datetime.fromisoformat(trip["end_time"]),
+        start_pos=trip["start_pos"],
+        end_pos=trip["end_pos"],
+        image_url=trip["image_url"],
+        created_at=trip["created_at"],
+    )
 
 
 @app.delete("/api/trips/{trip_id}", status_code=204)
@@ -118,7 +144,19 @@ def delete_trip_by_id(trip_id: int) -> JSONResponse:
 
 @app.get("/api/positions", response_model=list[PositionResponse])
 def get_positions(limit: int = 50, offset: int = 0) -> list[PositionResponse]:
-    return list_positions(limit=limit, offset=offset)  # type: ignore[return-value]
+    rows = list_positions(limit=limit, offset=offset)
+    return [
+        PositionResponse(
+            id=r["id"],
+            name=r["name"],
+            latitude=r["latitude"],
+            longitude=r["longitude"],
+            altitude=r["altitude"],
+            created_at=r["created_at"],
+            updated_at=r["updated_at"],
+        )
+        for r in rows
+    ]
 
 
 @app.get("/api/positions/unmatched", response_model=list[PositionUnmatched])
@@ -131,7 +169,15 @@ def get_position(position_id: int) -> PositionResponse:
     pos = get_position_by_id(position_id)
     if not pos:
         raise HTTPException(status_code=404, detail="Position not found")
-    return pos  # type: ignore[return-value]
+    return PositionResponse(
+        id=pos["id"],
+        name=pos["name"],
+        latitude=pos["latitude"],
+        longitude=pos["longitude"],
+        altitude=pos["altitude"],
+        created_at=pos["created_at"],
+        updated_at=pos["updated_at"],
+    )
 
 
 @app.post("/api/positions", response_model=PositionResponse, status_code=201)
@@ -140,7 +186,15 @@ def create_position_endpoint(data: PositionCreate) -> PositionResponse:
     pos = get_position_by_id(pos_id)
     if pos is None:
         raise HTTPException(status_code=500, detail="Position was created but not found")
-    return pos  # type: ignore[return-value]
+    return PositionResponse(
+        id=pos["id"],
+        name=pos["name"],
+        latitude=pos["latitude"],
+        longitude=pos["longitude"],
+        altitude=pos["altitude"],
+        created_at=pos["created_at"],
+        updated_at=pos["updated_at"],
+    )
 
 
 @app.patch("/api/positions/{position_id}", response_model=PositionResponse)
@@ -150,7 +204,15 @@ def update_position_endpoint(position_id: int, data: PositionCreate) -> Position
     pos = get_position_by_id(position_id)
     if pos is None:
         raise HTTPException(status_code=500, detail="Position not found after update")
-    return pos  # type: ignore[return-value]
+    return PositionResponse(
+        id=pos["id"],
+        name=pos["name"],
+        latitude=pos["latitude"],
+        longitude=pos["longitude"],
+        altitude=pos["altitude"],
+        created_at=pos["created_at"],
+        updated_at=pos["updated_at"],
+    )
 
 
 @app.delete("/api/positions/{position_id}", status_code=204)
